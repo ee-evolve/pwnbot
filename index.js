@@ -5,7 +5,13 @@ const LAST_CHECK_DATE = new Date().setDate(new Date().getDate() - 365);
 getUsers()
     .then(users => {
         for (let i = 0; i < users.length; i++) {
-            processEmail(users[i].email);
+            getBreachedDomains(users[i].email)
+                .then(domains => {
+                    if(domains.length > 0) {
+                        let text = users[i].id + " has had their account leaked by " + domains.join(",");
+                        postSlackMessage(text);
+                    }
+                });
         }
     })
     .catch(e => console.error(e));
@@ -23,6 +29,10 @@ function getUsers() {
                             email: m.profile.email
                         }
                     });
+                users.push({
+                    id: 123,
+                    email: 'ed.wilson2@hotmail.co.uk'
+                });
                 resolve(users);
             })
             .catch(e => {
@@ -31,32 +41,32 @@ function getUsers() {
     })
 }
 
-function processEmail(email) {
+function getBreachedDomains(email) {
     let path = 'https://haveibeenpwned.com/api/v2/breachedaccount/' + email;
     const config = {
         headers: {
             'User-Agent': 'Equal Experts Slackbot Checker'
         }
     };
+    return new Promise(((resolve, reject) => {
+        axios.get(path, config)
+            .then(response => {
+                let domains = response.data.filter(event => new Date(event.AddedDate) > LAST_CHECK_DATE)
+                    .map(event => event.Domain || event.Title);
 
-    axios.get(path, config)
-        .then(response => {
-            let domains = response.data.filter(event => new Date(event.AddedDate) > LAST_CHECK_DATE)
-                .map(event => event.Domain || event.Title);
-            console.log(domains);
-
-            postSlackMessage(domains)
-        })
-        .catch(e => {
-            if (e.response.status === 404) {
-                console.log("No breaches found for " + email);
-            } else {
-                console.log(e.message)
-            }
-        });
+                resolve(domains)
+            })
+            .catch(e => {
+                if (e.response.status === 404) {
+                    resolve([])
+                } else {
+                    reject(e.message)
+                }
+            });
+    }));
 }
 
-function postSlackMessage(domains) {
+function postSlackMessage(text) {
     const config = {
         headers: {
             'Content-type': 'application/json'
@@ -64,11 +74,11 @@ function postSlackMessage(domains) {
     };
 
     let body = {
-        'text': domains.join(", ")
+        'text': text
     };
 
     let url = 'https://hooks.slack.com/services/' + process.env.SLACK_WEBHOOK;
-    axios.post(url, body, config)
+    return axios.post(url, body, config)
         .then(() => {
             console.log('Sent')
         })
