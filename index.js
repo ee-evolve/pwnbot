@@ -21,8 +21,12 @@ for (let i = 0; i < EMAILS.length; i++) {
                 .map(event => event.Domain);
             console.log(domains);
         })
-        .catch(function () {
-            console.log("No breaches found for " + email);
+        .catch(function (e) {
+            if (e.response.status === 404) {
+                console.log("No breaches found for " + email);
+            } else {
+                console.log(e.message)
+            }
     });
 
 }
