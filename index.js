@@ -23,7 +23,7 @@ function process(email) {
     axios.get(path, config)
         .then(response => {
             let domains = response.data.filter(event => new Date(event.AddedDate) > lastWeek)
-                .map(event => event.Domain);
+                .map(event => event.Domain || event.Title);
             console.log(domains);
 
             postSlackMessage(domains)
