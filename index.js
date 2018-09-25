@@ -8,7 +8,7 @@ getUsers()
             getBreachedDomains(users[i].email)
                 .then(domains => {
                     if(domains.length > 0) {
-                        let text = users[i].id + " has had their account leaked by " + domains.join(",");
+                        let text = "<@" + users[i].id + "> has had their account leaked by " + domains.join(",");
                         postSlackMessage(text);
                     }
                 });
@@ -30,7 +30,7 @@ function getUsers() {
                         }
                     });
                 users.push({
-                    id: 123,
+                    id: 'UD09YGKD1',
                     email: 'ed.wilson2@hotmail.co.uk'
                 });
                 resolve(users);
