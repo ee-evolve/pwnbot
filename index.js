@@ -8,15 +8,18 @@ const SLACK_URL = 'https://hooks.slack.com/services/' + process.env.SLACK_WEBHOO
 
 const lastWeek = new Date().setDate(new Date().getDate() - 365);
 
-const config = {
-    headers: {
-        'User-Agent': 'Equal Experts Slackbot Checker'
-    }
-};
-
 for (let i = 0; i < EMAILS.length; i++) {
     let email = EMAILS[i];
+    process(email);
+}
+
+function process(email) {
     let path = URL + email;
+    const config = {
+        headers: {
+            'User-Agent': 'Equal Experts Slackbot Checker'
+        }
+    };
     axios.get(path, config)
         .then(response => {
             let domains = response.data.filter(event => new Date(event.AddedDate) > lastWeek)
@@ -31,11 +34,11 @@ for (let i = 0; i < EMAILS.length; i++) {
             } else {
                 console.log(e.message)
             }
-    });
+        });
 }
 
 function postSlackMessage(domains) {
-    let config = {
+    const config = {
         headers: {
             'Content-type': 'application/json'
         }
