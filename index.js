@@ -1,28 +1,47 @@
 const axios = require('axios');
 
-const EMAILS = ['ed.wilson2@hotmail.co.uk'];
+const LAST_CHECK_DATE = new Date().setDate(new Date().getDate() - 365);
 
-const URL = 'https://haveibeenpwned.com/api/v2/breachedaccount/';
+getUsers()
+    .then(users => {
+        for (let i = 0; i < users.length; i++) {
+            processEmail(users[i].email);
+        }
+    })
+    .catch(e => console.error(e));
 
-const SLACK_URL = 'https://hooks.slack.com/services/' + process.env.SLACK_WEBHOOK;
 
-const lastWeek = new Date().setDate(new Date().getDate() - 365);
-
-for (let i = 0; i < EMAILS.length; i++) {
-    let email = EMAILS[i];
-    process(email);
+function getUsers() {
+    return new Promise((resolve, reject) => {
+        axios.get('https://slack.com/api/users.list?token=' + process.env.SLACK_OAUTH_TOKEN)
+            .then(response => {
+                let users = response.data.members
+                    .filter(m => m.profile.email)
+                    .map(m => {
+                        return {
+                            id: m.id,
+                            email: m.profile.email
+                        }
+                    });
+                resolve(users);
+            })
+            .catch(e => {
+                reject(e.message);
+            })
+    })
 }
 
-function process(email) {
-    let path = URL + email;
+function processEmail(email) {
+    let path = 'https://haveibeenpwned.com/api/v2/breachedaccount/' + email;
     const config = {
         headers: {
             'User-Agent': 'Equal Experts Slackbot Checker'
         }
     };
+
     axios.get(path, config)
         .then(response => {
-            let domains = response.data.filter(event => new Date(event.AddedDate) > lastWeek)
+            let domains = response.data.filter(event => new Date(event.AddedDate) > LAST_CHECK_DATE)
                 .map(event => event.Domain || event.Title);
             console.log(domains);
 
@@ -48,11 +67,12 @@ function postSlackMessage(domains) {
         'text': domains.join(", ")
     };
 
-    axios.post(SLACK_URL, body, config)
+    let url = 'https://hooks.slack.com/services/' + process.env.SLACK_WEBHOOK;
+    axios.post(url, body, config)
         .then(() => {
             console.log('Sent')
         })
         .catch(e => {
             console.log(e.message)
-    })
+        })
 }
