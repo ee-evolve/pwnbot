@@ -7,7 +7,7 @@ getUsers()
         for (let i = 0; i < users.length; i++) {
             getBreachedDomains(users[i].email)
                 .then(domains => {
-                    if(domains.length > 0) {
+                    if (domains.length > 0) {
                         let text = "<@" + users[i].id + "> has had their account leaked by " + domains.join(",");
                         postSlackMessage(text);
                     }
@@ -41,6 +41,7 @@ function getUsers() {
     })
 }
 
+let nextRequestAllowedDate = new Date().getMilliseconds();
 function getBreachedDomains(email) {
     let path = 'https://haveibeenpwned.com/api/v2/breachedaccount/' + email;
     const config = {
@@ -48,21 +49,36 @@ function getBreachedDomains(email) {
             'User-Agent': 'Equal Experts Slackbot Checker'
         }
     };
-    return new Promise(((resolve, reject) => {
-        axios.get(path, config)
-            .then(response => {
-                let domains = response.data.filter(event => new Date(event.AddedDate) > LAST_CHECK_DATE)
-                    .map(event => event.Domain || event.Title);
 
-                resolve(domains)
-            })
-            .catch(e => {
-                if (e.response.status === 404) {
-                    resolve([])
-                } else {
-                    reject(e.message)
-                }
-            });
+    let now = new Date().getMilliseconds();
+    let delay = nextRequestAllowedDate - now;
+    if(delay < 0) {
+        delay = 0;
+    }
+    nextRequestAllowedDate = (now > nextRequestAllowedDate ? now : nextRequestAllowedDate) +  1500;
+
+    console.log("Delaying " + email + " by " + delay + "ms");
+    return new Promise(((resolve, reject) => {
+        setTimeout(
+            () => {
+                console.log("Requesting " + email + " " + new Date());
+                axios.get(path, config)
+                    .then(response => {
+                        let domains = response.data.filter(event => new Date(event.AddedDate) > LAST_CHECK_DATE)
+                            .map(event => event.Domain || event.Title);
+
+                        resolve(domains)
+                    })
+                    .catch(e => {
+                        if (e.response.status === 404) {
+                            resolve([])
+                        } else {
+                            reject(e.message)
+                        }
+                    });
+            },
+            delay
+        );
     }));
 }
 
