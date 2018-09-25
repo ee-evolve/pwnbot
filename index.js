@@ -25,7 +25,7 @@ for (let i = 0; i < EMAILS.length; i++) {
 
             postSlackMessage(domains)
         })
-        .catch(function (e) {
+        .catch(e => {
             if (e.response.status === 404) {
                 console.log("No breaches found for " + email);
             } else {
@@ -49,7 +49,7 @@ function postSlackMessage(domains) {
         .then(() => {
             console.log('Sent')
         })
-        .catch(function (e) {
+        .catch(e => {
             console.log(e.message)
     })
 }
