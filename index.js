@@ -1,4 +1,5 @@
 const axios = require('axios');
+const AsyncThrottle = require('./asyncThrottle');
 
 const LAST_CHECK_DATE = new Date().setDate(new Date().getDate() - 365);
 
@@ -41,7 +42,7 @@ function getUsers() {
     })
 }
 
-let nextRequestAllowedDate = new Date().getMilliseconds();
+let throttle = new AsyncThrottle(1500);
 function getBreachedDomains(email) {
     let path = 'https://haveibeenpwned.com/api/v2/breachedaccount/' + email;
     const config = {
@@ -50,12 +51,7 @@ function getBreachedDomains(email) {
         }
     };
 
-    let now = new Date().getMilliseconds();
-    let delay = nextRequestAllowedDate - now;
-    if(delay < 0) {
-        delay = 0;
-    }
-    nextRequestAllowedDate = (now > nextRequestAllowedDate ? now : nextRequestAllowedDate) +  1500;
+    let delay = throttle.reserveAndGetDelayUntilNextRequest();
 
     console.log("Delaying " + email + " by " + delay + "ms");
     return new Promise(((resolve, reject) => {
